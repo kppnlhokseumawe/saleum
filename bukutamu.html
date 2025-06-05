@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buku Tamu</title>
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <style> body { font-family: Arial }</style>
+</head>
+<body>
+    <h1>Daftar Buku Tamu KPPN Lhokseumawe</h1>
+    <input type="text" id="table-filter" placeholder="Cari di tabel..." style="margin-bottom: 10px; padding: 5px; width: 100%;">
+    <table id="data-table" class="display" style="width:100%">
+        <thead>
+            <tr id="table-header"></tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+    </table>
+
+    <script>
+        const spreadsheetId = "1VrL4e1iw2Dgt_4S-BKTSkFz2jUGmZb9j5G_uWcdUxC4";
+        const apiKey = "AIzaSyAkeRjFXNe9Tm5bBMCppS4hFLdengV7Q0M";
+        const sheetName = "Form Responses 1";
+        const apiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${sheetName}?key=${apiKey}`;
+
+        async function fetchGoogleSheet() {
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) {
+                    throw new Error("Gagal mengambil data.");
+                }
+                const data = await response.json();
+                renderTable(data.values || []);
+            } catch (error) {
+                console.error("Error:", error);
+            }
+        }
+
+        function formatTimestamp(timestamp) {
+            if (!timestamp) return "-"; // Jika timestamp kosong, kembalikan "-"
+        
+            // Pisahkan tanggal dan waktu
+            const [datePart, timePart] = timestamp.split(" ");
+            if (!datePart || !timePart) return "-"; // Jika format tidak valid, kembalikan "-"
+        
+            // Pisahkan komponen tanggal
+            const [month, day, year] = datePart.split("/");
+            if (!month || !day || !year) return "-"; // Jika format tanggal tidak valid, kembalikan "-"
+        
+            // Handle tahun 2 digit (misalnya, '25' -> 2025)
+            const fullYear = year.length === 2 ? `20${year}` : year;
+        
+            // Pisahkan komponen waktu
+            const [hours, minutes, seconds] = timePart.split(":");
+            if (!hours || !minutes || !seconds) return "-"; // Jika format waktu tidak valid, kembalikan "-"
+        
+            // Padding jam, menit, dan detik dengan 0 jika hanya 1 digit
+            const paddedHours = hours.padStart(2, '0');
+            const paddedMinutes = minutes.padStart(2, '0');
+            const paddedSeconds = seconds.padStart(2, '0');
+        
+            // Buat objek Date untuk memastikan validitas tanggal dan waktu
+            const date = new Date(`${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${paddedHours}:${paddedMinutes}:${paddedSeconds}Z`);
+            if (isNaN(date.getTime())) return "-"; // Jika tanggal tidak valid, kembalikan "-"
+        
+            // Format ke YYYYMMDDHHmmssSSS
+            return (
+                date.getFullYear() +
+                String(date.getMonth() + 1).padStart(2, '0') + // Bulan dimulai dari 0
+                String(date.getDate()).padStart(2, '0') +
+                paddedHours + // Jam yang sudah di-padding
+                paddedMinutes + // Menit yang sudah di-padding
+                paddedSeconds
+            );
+        }
+
+        function renderTable(data) {
+            if (!data || data.length === 0) {
+                console.warn("Tidak ada data untuk dirender.");
+                return;
+            }
+
+            const header = data[0];
+            const body = data.slice(1);
+
+            const headerRow = document.getElementById("table-header");
+            header.forEach(cell => {
+                const th = document.createElement("th");
+                th.textContent = cell || "-";
+                headerRow.appendChild(th);
+            });
+
+            const actionTh = document.createElement("th");
+            actionTh.textContent = "Aksi";
+            headerRow.appendChild(actionTh);
+
+            const tableBody = document.getElementById("table-body");
+            body.forEach((row, rowIndex) => {
+                if (!row || row.length === 0) return; // Pastikan row ada dan memiliki elemen
+
+                const tr = document.createElement("tr");
+                row.forEach((cell, cellIndex) => {
+                    const td = document.createElement("td");
+                    if (cellIndex === 0) { // Kolom pertama adalah timestamp
+                        td.textContent = formatTimestamp(cell); // Gunakan hasil formatTimestamp
+                    } else {
+                        td.textContent = cell ? cell : "-"; // Jika kosong, ubah menjadi "-"
+                    }
+                    tr.appendChild(td);
+                });
+
+                const actionTd = document.createElement("td");
+                const approvalStatus = row[row.length - 1] ? row[row.length - 1].trim() : "-"; // Ambil status persetujuan
+                if (approvalStatus === "Ya") {
+                    actionTd.innerHTML = `<button class="crud-btn btn-edit" onclick="viewRow(${rowIndex})">Cetak</button>`;
+                } else {
+                    actionTd.textContent = ""; // Tetap tambahkan kolom aksi agar tabel tetap rapi
+                }
+                tr.appendChild(actionTd);
+                tableBody.appendChild(tr);
+            });
+
+            // Inisialisasi DataTables setelah tabel selesai dirender
+            const table = $('#data-table').DataTable({
+                paging: true,
+                searching: true,
+                info: true,
+                order: [[0, 'desc']],
+                dom: 'lrtip'
+            });
+
+            $('#table-filter').on('keyup', function () {
+                table.search(this.value).draw();
+            });
+        }
+
+        function konversiTanggal(tanggal) {
+    	    const bulanDict = {
+    	        "1": "Januari", "2": "Februari", "3": "Maret", "4": "April",
+    	        "5": "Mei", "6": "Juni", "7": "Juli", "8": "Agustus",
+    	        "9": "September", "10": "Oktober", "11": "November", "12": "Desember"
+    	    };
+    	    const [bulan, hari, tahun] = tanggal.split("/");
+    	    return `${parseInt(hari)} ${bulanDict[bulan]} ${tahun}`;
+    	} 
+
+    function viewRow(rowIndex, isDelete = false) {
+    const table = $('#data-table').DataTable();
+    const rowData = table.row(rowIndex).data();
+    const tanggalFormatted = konversiTanggal(rowData?.[3] || '-');
+    const newWindow = window.open('', '_blank');
+
+   
+}
+
+
+        fetchGoogleSheet();
+    </script>
+</body>
+</html>
