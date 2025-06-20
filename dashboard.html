@@ -1,8 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    .responsive-iframe {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4 / 3; /* atau 16 / 9 sesuai kebutuhan */
+      border: 0;
+    }
+    .responsive-iframe iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+  </style>
 </head>
 <body>
-<iframe width="600" height="450" src="https://lookerstudio.google.com/embed/reporting/e86f9913-cb0b-4d44-8764-21849474a714/page/bGVOF" frameborder="0" style="border:0" allowfullscreen sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
+
+<div class="responsive-iframe">
+  <iframe 
+    src="https://lookerstudio.google.com/embed/reporting/e86f9913-cb0b-4d44-8764-21849474a714/page/bGVOF" 
+    frameborder="0" 
+    allowfullscreen 
+    sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox">
+  </iframe>
+</div>
+
 </body>
 </html>
